@@ -8,9 +8,9 @@
                 "-fdiagnostics-color=always",
                 "-g",
                 "-I", "C:/libs",
-                "${file}",
+                "${workspaceFolder}/src/*.cpp",
                 "-o",
-                "${fileDirname}\\${fileBasenameNoExtension}.exe"
+                "${workspaceFolder}/bin/stock_predictor.exe"
             ],
             "options": {
                 "cwd": "C:\\mingw64\\bin"

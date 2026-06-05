@@ -8,10 +8,11 @@ private:
 
     int size;
     int guess_points;
+    int dim_variable;
     Eigen::VectorXd slope_intercept;
     Eigen::MatrixXd uncertainty;
     Eigen::MatrixXd process_noise;
-    double noise;
+    Eigen::MatrixXd noise;
 
     double point_spread;
     double recombine_correction;
@@ -21,12 +22,12 @@ private:
     Eigen::VectorXd weights_mean; //weighted trust when averaging for new state
     Eigen::VectorXd weights_cov; //weighted trust when calculating new uncertainty
 
-    Eigen::MatrixXd CholeskySquareRoot(const Eigen::MatrixXd mat);
+    Eigen::MatrixXd CholeskySquareRoot(const Eigen::MatrixXd& mat);
 
 public:
-    UKF(int dimensions, double p_noise, double measure_noise, double alpha, double beta, double kappa);
+    UKF(int dimensions, double p_noise, Eigen::MatrixXd measure_noise, double alpha, double beta, double kappa);
 
-    void UKFUpdate(double price_A, double price_B);
+    void UKFUpdate(const Eigen::VectorXd& mat);
 
     Eigen::VectorXd getState() const;
 };

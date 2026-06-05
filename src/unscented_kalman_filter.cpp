@@ -1,10 +1,11 @@
 #include "unscented_kalman_filter.hpp"
+#include <Eigen/dense>
 #include <cmath>
 #include <stdexcept>
 
-UKF::UKF(int dimensions, double p_noise, double measure_noise, double alpha, double beta, double kappa){
+UKF::UKF(int dimensions, double p_noise, Eigen::MatrixXd measure_noise, double alpha, double beta, double kappa){
     size = dimensions;
-    guess_points = size*2.0+1;
+    guess_points = size*2+1.0;
     noise = measure_noise;
     point_spread = alpha;
     recombine_correction = beta;
@@ -23,7 +24,7 @@ UKF::UKF(int dimensions, double p_noise, double measure_noise, double alpha, dou
     }
 };
 
-Eigen::MatrixXd CholeskySquareRoot(const Eigen::MatrixXd mat){
+Eigen::MatrixXd UKF(const Eigen::MatrixXd& mat){
     Eigen::LLT<Eigen::MatrixXd> lower_lower_transpose_decomp_ofmat(mat);
 
     if (lower_lower_transpose_decomp_ofmat.info() == Eigen::NumericalIssue) {
@@ -33,6 +34,47 @@ Eigen::MatrixXd CholeskySquareRoot(const Eigen::MatrixXd mat){
     return lower_lower_transpose_decomp_ofmat.matrixL(); //matrixL take the lower triangular portion of the grid or the directional spread the guess (sigma) points need
 };
 
-void UKFUpdate(double price_A, double price_B){
-    
+void UKF::UKFUpdate(const Eigen::VectorXd& mat){
+    Eigen::MatrixXd spread = CholeskySquareRoot((step_size+size)*uncertainty);
+    Eigen::MatrixXd sigma_points;
+    sigma_points.col(0) = slope_intercept;
+    for(int i = 0;i<size;i++){
+        sigma_points.col(i+1) =  slope_intercept+spread.col(i);
+    }
+    for(int i = 0; i<size;i++){
+        sigma_points.col(i+1+size) = slope_intercept-spread.col(i);
+    }
+    Eigen::MatrixXd predicted_sigma_points = sigma_points; // needs system model to update
+    Eigen::MatrixXd predicted_covariance = Eigen::MatrixXd::Zero(size, size);
+    Eigen::VectorXd predicted_state = Eigen::VectorXd::Zero(size);
+    for(int i = 0;i<guess_points;i++){
+        predicted_state += weights_mean(i)*predicted_sigma_points.col(i);
+    }
+    Eigen::VectorXd temp = Eigen::VectorXd::Zero(size);
+    for(int i = 0;i<guess_points;i++){
+        temp = predicted_sigma_points.col(i)-predicted_state;
+        predicted_covariance += weights_cov(i)*(temp*temp.transpose());
+    }
+    predicted_covariance += process_noise;
+    dim_variable = mat.rows();
+    Eigen::MatrixXd measurement_points = Eigen::MatrixXd::Zero(dim_variable, guess_points);
+    Eigen::VectorXd predicted_measurement = Eigen::VectorXd::Zero(dim_variable);
+    double actual_price_A = mat(0);
+    double actual_price_B = mat(1);
+    for(int i = 0; i < guess_points; i++) {
+        double predicted_slope = predicted_sigma_points(0, i);
+        double predicted_intercept = predicted_sigma_points(1, i);
+        double price_A = (predicted_slope * actual_price_B) + predicted_intercept;
+        double price_B = 0.0;
+        if(predicted_slope != 0.0){
+            price_B = (actual_price_A - predicted_intercept);
+        } else{
+            price_B = actual_price_B;
+        }
+        predicted_measurement(0, i) = price_A;
+        predicted_measurement(1, i) = price_B;
+    }
+    for(int i = 0;i<guess_points;i++){
+        predicted_measurement = measurement_points.col(i)*weights_mean(i);
+    }
 };
