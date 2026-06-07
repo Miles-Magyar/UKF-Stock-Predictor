@@ -24,7 +24,7 @@ UKF::UKF(int dimensions, double p_noise, Eigen::MatrixXd measure_noise, double a
     }
 };
 
-Eigen::MatrixXd UKF(const Eigen::MatrixXd& mat){
+Eigen::MatrixXd UKF::CholeskySquareRoot(const Eigen::MatrixXd& mat){
     Eigen::LLT<Eigen::MatrixXd> lower_lower_transpose_decomp_ofmat(mat);
 
     if (lower_lower_transpose_decomp_ofmat.info() == Eigen::NumericalIssue) {
@@ -35,8 +35,9 @@ Eigen::MatrixXd UKF(const Eigen::MatrixXd& mat){
 };
 
 void UKF::UKFUpdate(const Eigen::VectorXd& mat){
+    dim_variable = mat.rows();
     Eigen::MatrixXd spread = CholeskySquareRoot((step_size+size)*uncertainty);
-    Eigen::MatrixXd sigma_points;
+    Eigen::MatrixXd sigma_points = Eigen::MatrixXd::Zero(size, guess_points);
     sigma_points.col(0) = slope_intercept;
     for(int i = 0;i<size;i++){
         sigma_points.col(i+1) =  slope_intercept+spread.col(i);
@@ -56,7 +57,6 @@ void UKF::UKFUpdate(const Eigen::VectorXd& mat){
         predicted_covariance += weights_cov(i)*(temp*temp.transpose());
     }
     predicted_covariance += process_noise;
-    dim_variable = mat.rows();
     Eigen::MatrixXd measurement_points = Eigen::MatrixXd::Zero(dim_variable, guess_points);
     Eigen::VectorXd predicted_measurement = Eigen::VectorXd::Zero(dim_variable);
     double actual_price_A = mat(0);
@@ -67,14 +67,33 @@ void UKF::UKFUpdate(const Eigen::VectorXd& mat){
         double price_A = (predicted_slope * actual_price_B) + predicted_intercept;
         double price_B = 0.0;
         if(predicted_slope != 0.0){
-            price_B = (actual_price_A - predicted_intercept);
+            price_B = (actual_price_A - predicted_intercept)/predicted_slope;
         } else{
             price_B = actual_price_B;
         }
-        predicted_measurement(0, i) = price_A;
-        predicted_measurement(1, i) = price_B;
+        measurement_points(0, i) = price_A;
+        measurement_points(1, i) = price_B;
+    }
+    Eigen::MatrixXd innovation_covariance = Eigen::MatrixXd::Zero(dim_variable, dim_variable); //uncertainty in real prices
+    Eigen::VectorXd price_error = Eigen::VectorXd::Zero(dim_variable);
+    Eigen::MatrixXd cross_covariance = Eigen::MatrixXd::Zero(size, dim_variable); //connection between guess and real price
+    for(int i = 0;i<guess_points;i++){
+        predicted_measurement += measurement_points.col(i)*weights_mean(i);
     }
     for(int i = 0;i<guess_points;i++){
-        predicted_measurement = measurement_points.col(i)*weights_mean(i);
+        price_error = measurement_points.col(i)-predicted_measurement;
+        innovation_covariance += weights_cov(i)*(price_error*price_error.transpose());
     }
+    innovation_covariance+=noise;
+    Eigen::VectorXd slope_var = Eigen::VectorXd::Zero(size);
+    Eigen::VectorXd measure_var = Eigen::VectorXd::Zero(size);
+    for(int i = 0;i<guess_points;i++){
+        measure_var = measurement_points.col(i)-predicted_measurement;
+        slope_var = predicted_sigma_points.col(i)-predicted_state;
+        cross_covariance += slope_var*weights_cov(i)*measure_var.transpose();
+    }
+    Eigen::MatrixXd kalman_gain = Eigen::MatrixXd::Zero(size, dim_variable);
+    kalman_gain = cross_covariance*innovation_covariance.inverse();
+    slope_intercept = slope_intercept+kalman_gain*(mat-predicted_measurement);
+    uncertainty = predicted_covariance-kalman_gain*innovation_covariance*kalman_gain.transpose();
 };
