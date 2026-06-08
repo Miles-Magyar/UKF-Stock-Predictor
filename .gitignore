@@ -30,3 +30,9 @@
 *.exe
 *.out
 *.app
+
+#env variables
+*.env
+
+#keys
+keys.json
