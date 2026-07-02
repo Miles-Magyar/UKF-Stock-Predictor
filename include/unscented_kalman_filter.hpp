@@ -9,7 +9,6 @@ private:
     int size;
     int guess_points;
     int dim_variable;
-    Eigen::VectorXd slope_intercept;
     Eigen::MatrixXd uncertainty;
     Eigen::MatrixXd process_noise;
     Eigen::MatrixXd noise;
@@ -26,7 +25,7 @@ private:
 
 public:
     UKF(int dimensions, double p_noise, Eigen::MatrixXd measure_noise, double alpha, double beta, double kappa);
-
+    Eigen::VectorXd slope_intercept;
     void UKFUpdate(const Eigen::VectorXd& mat);
 
     Eigen::VectorXd getState() const;
