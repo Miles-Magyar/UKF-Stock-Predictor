@@ -4,6 +4,7 @@
 #include <vector>
 #include <thread>
 #include <chrono>
+#include <filesystem>
 #include <ixwebsocket/IXNetSystem.h>
 #include <ixwebsocket/IXWebSocket.h>
 #include <nlohmann/json.hpp>
@@ -28,6 +29,17 @@ int main(){
     double latest_price_B = 0.0;
     bool has_stock_A = false;
     bool has_stock_B = false;
+    std::string csv = "ukf_training_data.csv";
+    bool file_exists = std::filesystem::exists(csv);
+    std::ofstream csvfile(csv, std::ios::app);
+    if(!csvfile.is_open()){
+        std::cerr<<"Failed to create or open CSV file"<<std::endl;
+        return 1;
+    }
+    if(!file_exists){
+        csvfile<<"Timestamp_a,Price_SPY,Timestamp_b,Price_QQQ,Slope,Intercept\n";
+        csvfile.flush();
+    }
     ix::initNetSystem();
     ix::WebSocket webSocket;
     std::string API_KEY, SECRET_KEY;
@@ -61,20 +73,28 @@ int main(){
                     else if(event.contains("T")&&(event["T"] == ("t"))){
                         std::string symbol = event["S"];
                         double price = event["p"];
+                        std::string timestamp_A;
+                        std::string timestamp_B;
                         //symbol needs to be correct, so when adding many variables, increase the # of if statements
                         if (symbol == "SPY") {
                             latest_price_A = price;
                             has_stock_A = true;
+                            std::string timestamp_A = event["t"];
                         } else if (symbol == "QQQ") {
                             latest_price_B = price;
                             has_stock_B = true;
+                            std::string timestamp_B = event["t"];
                         }
                         if (has_stock_A && has_stock_B) {
-                            Eigen::VectorXd mat(2);
-                            mat << latest_price_A, latest_price_B;
+                            Eigen::VectorXd measurement(2);
+                            measurement<<latest_price_A, latest_price_B;
                             //update and spit out slope and intercept
-                            ukf.UKFUpdate(mat);
+                            ukf.UKFUpdate(measurement);
                             std::cout<<"Current Slope: "<<ukf.slope_intercept(0)<<" | Current Intercept: "<<ukf.slope_intercept(1)<<std::endl;
+                            if(csvfile.is_open()){
+                                csvfile<<timestamp_A<<","<<latest_price_A<<","<<timestamp_B<<","<<latest_price_B<<","<<ukf.slope_intercept(0)<<","<<ukf.slope_intercept(1)<<"\n";
+                                csvfile.flush();
+                            }
                             has_stock_A = false;
                             has_stock_B = false;
                         }
@@ -107,5 +127,8 @@ int main(){
 
     webSocket.stop();
     ix::uninitNetSystem();
+    if (csvfile.is_open()) {
+        csvfile.close();
+    }
     return 0;
 }
