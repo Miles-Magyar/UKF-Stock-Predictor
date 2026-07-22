@@ -7,11 +7,12 @@
 #include <filesystem>
 #include <iomanip>
 #include <sstream>
+#include <Eigen/Dense>
 #include <cmath>
 #include <ixwebsocket/IXNetSystem.h>
 #include <ixwebsocket/IXWebSocket.h>
 #include <nlohmann/json.hpp>
-#include "unscented_kalman_filter.hpp"
+#include "Research.hpp"
 #include "structures.hpp"
 using namespace std;
 using json = nlohmann::json;
@@ -32,23 +33,7 @@ double timeStringToSeconds(const std::string& timeStr){
     ss>>std::get_time(&tm, "%Y-%m-%dT%H:%M:%S");
     return static_cast<double>(std::mktime(&tm));
 }
-class Research{
-private:
-    bool has_stock_A;
-    bool has_stock_B;
-    std::string timestamp_A;
-    std::string timestamp_B;
-    std::string csv;
-    Eigen::MatrixXd noise;
-    int dim;
-    ix::WebSocket webSocket;
-public:
-    void runLive();
-    void HistoricReplay(std::string csv);
-    Research();
-    UKF ukf;
-    void process_measurement(double spy, double qqq, const std::string& spy_time, const std::string& qqq_time);
-};
+
 Research::Research(): dim(2), noise(Eigen::MatrixXd::Identity(dim, dim)*.01), ukf(dim, 0.001, noise, 2.0, 0.0, 0.0){
         
 }
@@ -63,6 +48,8 @@ void Research::process_measurement(double latest_price_A, double latest_price_B,
         std::cout<<"Current Slope: "<<ukf.slope_intercept(0)<<" | Current Intercept: "<<ukf.slope_intercept(1)<<std::endl;
     }
 }
+
+
 
 void Research::HistoricReplay(std::string csv){
     bool file_exists = std::filesystem::exists(csv);
