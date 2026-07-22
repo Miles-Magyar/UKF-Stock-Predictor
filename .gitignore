@@ -6,7 +6,10 @@
 *.lo
 *.o
 *.obj
-
+/external
+/build
+/data
+/bin
 # Precompiled Headers
 *.gch
 *.pch
