@@ -5,7 +5,7 @@
 #include <Eigen/Dense>
 #include <ixwebsocket/IXWebSocket.h>
 #include "unscented_kalman_filter.hpp"
-
+#include <ixwebsocket/IXHttpClient.h>
 class Research {
 private:
     int dim;
@@ -16,12 +16,14 @@ private:
     std::string timestamp_B;
     std::string csv;
     ix::WebSocket webSocket;
+    ix::HttpClient httpClient;
 public:
     Research();
     void runLive();
     void HistoricReplay(std::string csv);
     UKF ukf;
     void process_measurement(double spy, double qqq, const std::string& spy_time, const std::string& qqq_time);
+    std::tuple<double,double, double> create_drift(std::string stock, double time); 
 };
 
 #endif

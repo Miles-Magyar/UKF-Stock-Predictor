@@ -13,7 +13,7 @@ add_executable(UKFStockPredictor
     src/Research.cpp
     src/unscented_kalman_filter.cpp
     src/UI.cpp
-
+    src/monte_carlo.cpp
     external/glad/src/gl.c
 
     external/imgui/imgui.cpp

@@ -11,9 +11,11 @@
 #include <cmath>
 #include <ixwebsocket/IXNetSystem.h>
 #include <ixwebsocket/IXWebSocket.h>
+#include <ixwebsocket/IXHttpClient.h>
 #include <nlohmann/json.hpp>
 #include "Research.hpp"
 #include "structures.hpp"
+#include <utility>
 using namespace std;
 using json = nlohmann::json;
 void loadjson(std::string& apiKey, std::string& secretKey) {
@@ -86,6 +88,60 @@ void Research::HistoricReplay(std::string csv){
                 std::cerr << "Bad CSV row: " << e.what() << '\n';
             }
         }
+    }
+}
+std::tuple<double, double, double> Research::create_drift(std::string stock, double time){ //time does nothing for now, neither does the stock
+    ix::initNetSystem();
+    std::string API_KEY, SECRET_KEY;
+    loadjson(API_KEY, SECRET_KEY);
+    std::string url = "https://data.alpaca.markets/v2/stocks/bars?symbols=SPY&timeframe=1Day&start=2025-01-01&end=2026-07-30&feed=iex&adjustment=all&limit=1000&sort=asc";
+    auto request = httpClient.createRequest(url);
+    request->extraHeaders["APCA-API-KEY-ID"] = API_KEY;
+    request->extraHeaders["APCA-API-SECRET-KEY"] = SECRET_KEY;
+    auto response = httpClient.get(url, request);
+    if(response->statusCode == 200){
+        try{
+            json data = json::parse(response->body);
+            if(data.contains("bars") && data["bars"].contains("SPY")){
+                auto bars = data["bars"]["SPY"];
+                if(bars.is_array() && !bars.empty()){
+                    double last_price = 0;
+                    std::vector<double> ri(bars.size());
+                    for(size_t i = 1; i < bars.size(); i++){
+                        double c_now = bars[i]["c"].get<double>();
+                        double c_prev = bars[i - 1]["c"].get<double>();
+                        ri[i] = std::log(c_now/c_prev);
+                        if(i == bars.size() - 1){
+                            last_price = c_now;
+                        }
+                    }
+                    double ri_size = 0;
+                    for(int i = 0; i<ri.size(); i++){
+                        ri_size += ri[i];
+                    }
+                    double drift = ri_size/(ri.size()-1);
+                    double ri_minus_mean = 0;
+                    for(int i = 1; i<ri.size(); i++){
+                        ri_minus_mean += (ri[i] - drift) * (ri[i] - drift);
+                    }
+                    
+                    double volatility = std::sqrt(ri_minus_mean/(ri.size()-2));
+                    return std::make_tuple(drift, volatility, last_price); // Assuming the third value is unused or a placeholder
+                } else{
+                    std::cerr<<"No bars data found for SPY"<<" "<<response->statusCode<<" "<<response->description<<std::endl;
+                    return std::make_tuple(0.0, 0.0, 0.0);
+                }
+            } else{
+                std::cerr<<"Unexpected JSON structure: "<<response->body<<std::endl;
+                return std::make_tuple(0.0, 0.0, 0.0);
+            }
+        } catch(const json::parse_error& e){
+            std::cerr<<"JSON parse error: "<<e.what()<<std::endl;
+            return std::make_tuple(0.0, 0.0, 0.0);
+        }
+    } else{
+        std::cerr<<"Error fetching data: "<<response->statusCode<<" "<<response->description<<std::endl;
+        return std::make_tuple(0.0, 0.0, 0.0);
     }
 }
 
