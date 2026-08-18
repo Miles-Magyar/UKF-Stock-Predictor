@@ -76,10 +76,8 @@ void Research::HistoricReplay(std::string csv){
             for(int i = 0;i<fields.size();i++){
                 std::cout<<"Field "<<i<<":"<<fields[i]<<std::endl;
             }
-            if(fields.size() < 8){
+            if(fields.size() < 4){
                 continue;
-            } else{
-                break;
             }
             try{
                 process_measurement(std::stod(fields[1]), std::stod(fields[3]), fields[0], fields[2]);
@@ -90,6 +88,7 @@ void Research::HistoricReplay(std::string csv){
         }
     }
 }
+
 std::tuple<double, double, double> Research::create_drift(std::string stock, double time){ //time does nothing for now, neither does the stock
     ix::initNetSystem();
     std::string API_KEY, SECRET_KEY;
@@ -142,6 +141,41 @@ std::tuple<double, double, double> Research::create_drift(std::string stock, dou
     } else{
         std::cerr<<"Error fetching data: "<<response->statusCode<<" "<<response->description<<std::endl;
         return std::make_tuple(0.0, 0.0, 0.0);
+    }
+}
+
+void Research::monte_carlo_simulation(Eigen::MatrixXd states, double probability){
+    csv = "monte_carlo_results.csv";
+    std::cout<<"Monte Carlo Simulation Results:"<<std::endl;
+    std::cout<<"Probability of reaching target: "<<probability<<std::endl;
+    std::cout<<"Sampled States:"<<std::endl;
+    std::cout<<states<<std::endl;
+    bool file_exists = std::filesystem::exists(csv);
+    std::ofstream csvfile(csv, std::ios::app);
+    if(!csvfile.is_open()){
+        std::cerr<<"Failed to create or open CSV file"<<std::endl;
+    }
+    if(!file_exists){
+        int count = 0;
+        for(int j = 0; j<states.cols(); j++){
+            csvfile<<"step"+std::to_string(count);
+            csvfile<<",";
+            count++;
+        }
+        csvfile<<"Probability\n";
+        csvfile.flush();
+    }
+    if(csvfile.is_open()){
+        for(int i = 0; i < states.rows(); i++){
+            for(int j = 0; j < states.cols(); j++){
+                csvfile << states(i, j);
+                if(j < states.cols() - 1){
+                    csvfile << ",";
+                }
+            }
+            csvfile << "," << probability << "\n";
+        }
+        csvfile.flush();
     }
 }
 

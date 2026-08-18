@@ -13,9 +13,9 @@ private:
     Eigen::VectorXd S;
     double probability;
     double last_price;
-    int target_price;
+    double target_price;
 public:
-    MonteCarlo(int num_samples, int steps, int target_price);
+    MonteCarlo(int num_samples, int steps, double target_price);
     Eigen::VectorXd generateRandomWalk(int steps, double drift, double volatility, double last_price);
 };
 
