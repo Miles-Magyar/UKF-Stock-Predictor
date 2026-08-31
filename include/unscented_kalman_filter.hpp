@@ -16,18 +16,22 @@ private:
     double recombine_correction;
     double weight_shift;
     double step_size; //spread^2(size+w_shift)-size
-    
+   
     Eigen::VectorXd weights_mean; //weighted trust when averaging for new state
     Eigen::VectorXd weights_cov; //weighted trust when calculating new uncertainty
 
     Eigen::MatrixXd CholeskySquareRoot(const Eigen::MatrixXd& mat);
 
 public:
+    void reset(int dimensions, double p_noise, const Eigen::MatrixXd& measure_noise, double alpha, double beta, double kappa);
     UKF(int dimensions, double p_noise, Eigen::MatrixXd measure_noise, double alpha, double beta, double kappa);
     Eigen::VectorXd slope_intercept;
+    Eigen::VectorXd smoothed_price;
     void UKFUpdate(const Eigen::VectorXd& mat);
     Eigen::MatrixXd uncertainty;
     Eigen::VectorXd getState() const;
+    void UKFUpdate1Stock(const Eigen::VectorXd& mat);
 };
+
 
 #endif

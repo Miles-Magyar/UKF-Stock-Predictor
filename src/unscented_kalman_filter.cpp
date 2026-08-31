@@ -3,7 +3,13 @@
 #include <cmath>
 #include <stdexcept>
 
+//ukf initialization
 UKF::UKF(int dimensions, double p_noise, Eigen::MatrixXd measure_noise, double alpha, double beta, double kappa){
+    reset(dimensions, p_noise, measure_noise, alpha, beta, kappa);
+};
+
+//so that you can reset the UKF with new parameters without creating a new object
+void UKF::reset(int dimensions, double p_noise, const Eigen::MatrixXd& measure_noise, double alpha, double beta, double kappa){
     size = dimensions;
     guess_points = size*2+1.0;
     noise = measure_noise;
@@ -24,6 +30,7 @@ UKF::UKF(int dimensions, double p_noise, Eigen::MatrixXd measure_noise, double a
     }
 };
 
+//Cholesky decomposition to get the square root of the covariance matrix, which is used to generate sigma points
 Eigen::MatrixXd UKF::CholeskySquareRoot(const Eigen::MatrixXd& mat){
     Eigen::LLT<Eigen::MatrixXd> lower_lower_transpose_decomp_ofmat(mat);
 
@@ -34,6 +41,7 @@ Eigen::MatrixXd UKF::CholeskySquareRoot(const Eigen::MatrixXd& mat){
     return lower_lower_transpose_decomp_ofmat.matrixL(); //matrixL take the lower triangular portion of the grid or the directional spread the guess (sigma) points need
 };
 
+//calculates correlation between two stocks, useful for pairs trading
 void UKF::UKFUpdate(const Eigen::VectorXd& mat){
     dim_variable = mat.rows();
     Eigen::MatrixXd spread = CholeskySquareRoot((step_size+size)*uncertainty);
@@ -95,5 +103,58 @@ void UKF::UKFUpdate(const Eigen::VectorXd& mat){
     Eigen::MatrixXd kalman_gain = Eigen::MatrixXd::Zero(size, dim_variable);
     kalman_gain = cross_covariance*innovation_covariance.inverse();
     slope_intercept = slope_intercept+kalman_gain*(mat-predicted_measurement);
+    uncertainty = predicted_covariance-kalman_gain*innovation_covariance*kalman_gain.transpose();
+};
+
+//updates one stock price, useful for the predicted price of one stock rather than the correlation between two
+void UKF::UKFUpdate1Stock(const Eigen::VectorXd& mat){
+    dim_variable = mat.rows();
+    Eigen::MatrixXd spread = CholeskySquareRoot((step_size+size)*uncertainty);
+    Eigen::MatrixXd sigma_points = Eigen::MatrixXd::Zero(size, guess_points);
+    sigma_points.col(0) = smoothed_price;
+    for(int i = 0;i<size;i++){
+        sigma_points.col(i+1) =  smoothed_price+spread.col(i);
+    }
+    for(int i = 0; i<size;i++){
+        sigma_points.col(i+1+size) = smoothed_price-spread.col(i);
+    }
+    Eigen::MatrixXd predicted_sigma_points = sigma_points; // needs system model to update
+    Eigen::MatrixXd predicted_covariance = Eigen::MatrixXd::Zero(size, size);
+    Eigen::VectorXd predicted_state = Eigen::VectorXd::Zero(size);
+    for(int i = 0;i<guess_points;i++){
+        predicted_state += weights_mean(i)*predicted_sigma_points.col(i);
+    }
+    Eigen::VectorXd temp = Eigen::VectorXd::Zero(size);
+    for(int i = 0;i<guess_points;i++){
+        temp = predicted_sigma_points.col(i)-predicted_state;
+        predicted_covariance += weights_cov(i)*(temp*temp.transpose());
+    }
+    predicted_covariance += process_noise;
+    Eigen::MatrixXd measurement_points = Eigen::MatrixXd::Zero(dim_variable, guess_points);
+    Eigen::VectorXd predicted_measurement = Eigen::VectorXd::Zero(dim_variable);
+    for (int i = 0; i < guess_points; i++) {
+        measurement_points(0, i) = predicted_sigma_points(0, i);
+    }
+    Eigen::MatrixXd innovation_covariance = Eigen::MatrixXd::Zero(dim_variable, dim_variable); //uncertainty in real prices
+    Eigen::VectorXd price_error = Eigen::VectorXd::Zero(dim_variable);
+    Eigen::VectorXd state_error = Eigen::VectorXd::Zero(dim_variable);
+    Eigen::MatrixXd cross_covariance = Eigen::MatrixXd::Zero(size, dim_variable); //connection between guess and real price
+    for(int i = 0;i<guess_points;i++){
+        predicted_measurement += measurement_points.col(i)*weights_mean(i);
+    }
+    for(int i = 0;i<guess_points;i++){
+        price_error = measurement_points.col(i)-predicted_measurement;
+        innovation_covariance += weights_cov(i)*(price_error*price_error.transpose());
+    }
+    innovation_covariance+=noise;
+    Eigen::VectorXd slope_var = Eigen::VectorXd::Zero(size);
+    Eigen::VectorXd measure_var = Eigen::VectorXd::Zero(size);
+    for(int i = 0;i<guess_points;i++){
+        measure_var = measurement_points.col(i)-predicted_measurement;
+        slope_var = predicted_sigma_points.col(i)-predicted_state;
+        cross_covariance += slope_var*weights_cov(i)*measure_var.transpose();
+    }
+    Eigen::MatrixXd kalman_gain = cross_covariance*innovation_covariance.ldlt().solve(Eigen::MatrixXd::Identity(dim_variable, dim_variable));
+    smoothed_price = predicted_state+kalman_gain*(mat-predicted_measurement);
     uncertainty = predicted_covariance-kalman_gain*innovation_covariance*kalman_gain.transpose();
 };

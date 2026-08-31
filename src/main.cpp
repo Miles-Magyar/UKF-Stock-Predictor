@@ -15,6 +15,8 @@
 #include "structures.hpp"
 #include "Research.hpp"
 #include "monte_carlo.hpp"
+
+//main function, everything runs
 int main(){
     Research research;
     MonteCarlo monteCarlo(10000, 365, 10); // 1000 samples, 365 steps, target price increase of 10
