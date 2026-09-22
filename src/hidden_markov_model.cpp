@@ -1,8 +1,43 @@
 #include "hidden_markov_model.hpp"
-
+#include <numbers>
 HiddenMarkovModel::HiddenMarkovModel(){
     num_states = 3;
 
+}
+
+//initializes regimes, state vector and transition matrix
+void HiddenMarkovModel::initializefromRegimes(const std::vector<RegimeParameters>& regimes){
+    int K = regimes.size();
+    num_states = K;
+    this->regimes = regimes;
+    transition_matrix = Eigen::MatrixXd::Zero(K, K);
+    initial_state_vector = Eigen::VectorXd::Constant(K, 1.0/K);
+
+    for(int i = 0;i<K;++i){
+        for(int j = 0;j<K;++j){
+            if(i==j){
+                transition_matrix(i, j) = 0.9;
+            } else{
+                transition_matrix(i, j) = 0.1/(K-1);
+            }
+        }
+    }
+}
+
+double HiddenMarkovModel::gaussian_pdf(double x, double mean, double variance) const{
+    if(variance <= 1e-12){
+        variance = 1e-12; //if variance small to avoid division by zero
+    }
+    double pi = 3.14159265358979323846;
+    double coeff = 1.0/std::sqrt(2.0*pi*variance);
+    double exponent = -((x-mean)*(x-mean))/(2.0*variance);
+    return coeff * std::exp(exponent);
+}
+
+double HiddenMarkovModel::emissionProbability(double return_value, int state, double vol) const {
+    double mean = regimes[state].mean_return;
+    double variance = regimes[state].variance_return;
+    return gaussian_pdf(return_value, mean, variance)*gaussian_pdf(vol, regimes[state].mean_volatility, regimes[state].variance_volatility);
 }
 
 double HiddenMarkovModel::baum_welch_algorithm(Eigen::VectorXd& observations){

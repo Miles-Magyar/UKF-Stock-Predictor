@@ -4,6 +4,9 @@
 #include <utility>
 #include <deque>
 #include <string>
+#include <cmath>
+#include <vector>
+#include <numbers>
 struct RegimeParameters {
     double mean_return;
     double mean_volatility;
@@ -28,7 +31,10 @@ private:
     //continuous emissions
     Eigen::VectorXd emission_means;
     Eigen::VectorXd emission_variances;
+    void initializefromRegimes(const std::vector<RegimeParameters>& regimes);
     std::vector<double> computeReturns() const;
+    double gaussian_pdf(double x, double mean, double variance) const;
+    double emissionProbability(double return_value, int state, double vol) const;
     Eigen::MatrixXd buildFeatures(int window = 3) const;
     Eigen::MatrixXd normalizeFeatures(const Eigen::MatrixXd& features);
     Eigen::MatrixXd initCentroids(const Eigen::MatrixXd& features, int k);
