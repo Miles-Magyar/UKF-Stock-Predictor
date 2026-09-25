@@ -16,13 +16,14 @@ struct RegimeParameters {
 class HiddenMarkovModel {
 public:
     HiddenMarkovModel();
-    double forward_algorithm(Eigen::VectorXd& observations);
-    double baum_welch_algorithm(Eigen::VectorXd& observations);
+    std::pair<Eigen::MatrixXd, double> forward_algorithm(Eigen::MatrixXd& observations);
+    double baum_welch_algorithm(Eigen::MatrixXd& observations);
     std::deque<std::pair<double, std::string>> stock_data; 
     std::vector<RegimeParameters> k_means(int states);
-    std::pair<Eigen::VectorXd, double> viterbi_algorithm(Eigen::VectorXd& observations); //returns statepath and probability of the most likely state sequence
+    std::pair<Eigen::VectorXd, double> viterbi_algorithm(Eigen::MatrixXd& observations); //returns statepath and probability of the most likely state sequence
 private:
     Eigen::MatrixXd transition_matrix;
+    Eigen::MatrixXd backward_algorithm(Eigen::MatrixXd& observations);
     Eigen::VectorXd initial_state_vector;
     Eigen::MatrixXd emission_matrix;
     std::vector<RegimeParameters> regimes;
