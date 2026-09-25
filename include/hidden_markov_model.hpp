@@ -21,6 +21,7 @@ public:
     std::deque<std::pair<double, std::string>> stock_data; 
     std::vector<RegimeParameters> k_means(int states);
     std::pair<Eigen::VectorXd, double> viterbi_algorithm(Eigen::MatrixXd& observations); //returns statepath and probability of the most likely state sequence
+    void initializefromRegimes(const std::vector<RegimeParameters>& regimes);
 private:
     Eigen::MatrixXd transition_matrix;
     Eigen::MatrixXd backward_algorithm(Eigen::MatrixXd& observations);
@@ -32,7 +33,6 @@ private:
     //continuous emissions
     Eigen::VectorXd emission_means;
     Eigen::VectorXd emission_variances;
-    void initializefromRegimes(const std::vector<RegimeParameters>& regimes);
     std::vector<double> computeReturns() const;
     double gaussian_pdf(double x, double mean, double variance) const;
     double emissionProbability(double return_value, int state, double vol) const;

@@ -2,7 +2,6 @@
 #include <numbers>
 HiddenMarkovModel::HiddenMarkovModel(){
     num_states = 3;
-
 }
 
 //initializes regimes, state vector and transition matrix
