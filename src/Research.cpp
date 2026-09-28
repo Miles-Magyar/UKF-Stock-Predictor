@@ -121,6 +121,10 @@ void Research::window_creation(){
                             for(int i = 0;i<hmm.stock_data.size();++i){
                                 Research::process_measurement_for_HMM(hmm.stock_data[i].first, hmm.stock_data[i].second, ukf2);
                             }
+                            hmm.initializefromRegimes(hmm.k_means(3));
+                            Eigen::MatrixXd obs = hmm.buildFeatures();
+                            hmm.baum_welch_algorithm(obs);
+                            auto [path, score] = hmm.viterbi_algorithm(obs);
                             ukf2.reset(1, 0.001, noise, 2.0, 0.0, 0.0);
                             has_stock_A = false;
                         }
