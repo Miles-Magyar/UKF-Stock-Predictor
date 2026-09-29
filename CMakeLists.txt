@@ -15,7 +15,7 @@ add_executable(UKFStockPredictor
     src/UI.cpp
     src/monte_carlo.cpp
     external/glad/src/gl.c
-
+    src/hidden_markov_model.cpp
     external/imgui/imgui.cpp
     external/imgui/imgui_draw.cpp
     external/imgui/imgui_tables.cpp
