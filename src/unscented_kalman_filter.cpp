@@ -20,6 +20,7 @@ void UKF::reset(int dimensions, double p_noise, const Eigen::MatrixXd& measure_n
     uncertainty = Eigen::MatrixXd::Identity(size, size);
     process_noise = Eigen::MatrixXd::Identity(size, size)*p_noise;
     slope_intercept = Eigen::VectorXd::Zero(size);
+    smoothed_price = Eigen::VectorXd::Zero(size);
     weights_mean = Eigen::VectorXd::Zero(guess_points);
     weights_cov = Eigen::VectorXd::Zero(guess_points);
     weights_mean(0) = step_size/(size+step_size);

@@ -12,6 +12,7 @@
 #include "hidden_markov_model.hpp"
 class Research {
 private:
+    int dim;
     Eigen::MatrixXd noise;
     bool has_stock_A;
     bool has_stock_B;
@@ -22,7 +23,6 @@ private:
     ix::HttpClient httpClient;
 public:
     Research();
-    int dim;
     void runLive();
     void HistoricReplay(std::string csv);
     void window_creation();

@@ -1,5 +1,4 @@
 #include "hidden_markov_model.hpp"
-#include <numbers>
 HiddenMarkovModel::HiddenMarkovModel(){
     num_states = 3;
 }

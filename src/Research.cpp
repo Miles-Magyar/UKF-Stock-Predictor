@@ -42,7 +42,7 @@ double timeStringToSeconds(const std::string& timeStr){
 }
 
 //initialization
-Research::Research(): dim(2), noise(Eigen::MatrixXd::Identity(dim, dim)*.01), ukf1(dim, 0.001, noise, 2.0, 0.0, 0.0), ukf2(1, 0.001, noise, 2.0, 0.0, 0.0){
+Research::Research(): dim(2), noise(Eigen::MatrixXd::Identity(dim, dim)*.01), ukf1(dim, 0.001, noise, 2.0, 0.0, 0.0), ukf2(1, 0.001, Eigen::MatrixXd::Identity(1, 1)*.01, 2.0, 0.0, 0.0){
        
 }
 
@@ -64,7 +64,7 @@ void Research::process_measurement_for_HMM(double latest_price_A, const std::str
     measurement<<latest_price_A;
     double sec_A = timeStringToSeconds(timestamp_A);
     currukf.UKFUpdate1Stock(measurement);
-    std::cout<<"Current Slope: "<<currukf.smoothed_price(0)<<" | Current Intercept: "<<currukf.smoothed_price(1)<<std::endl;
+    std::cout<<"Smoothed Price: "<<currukf.smoothed_price(0)<<std::endl;
 }
 
 //creates the window for the HMM to run on, and updates the HMM with new data as it comes in
@@ -121,16 +121,22 @@ void Research::window_creation(){
                             for(int i = 0;i<hmm.stock_data.size();++i){
                                 Research::process_measurement_for_HMM(hmm.stock_data[i].first, hmm.stock_data[i].second, ukf2);
                             }
-                            hmm.initializefromRegimes(hmm.k_means(3));
-                            Eigen::MatrixXd obs = hmm.buildFeatures();
-                            hmm.baum_welch_algorithm(obs);
-                            auto [path, score] = hmm.viterbi_algorithm(obs);
-                            ukf2.reset(1, 0.001, noise, 2.0, 0.0, 0.0);
+                            std::vector<RegimeParameters> found = hmm.k_means(3);
+                            if(!found.empty()){
+                                hmm.initializefromRegimes(found);
+                                Eigen::MatrixXd obs = hmm.buildFeatures();
+                                hmm.baum_welch_algorithm(obs);
+                                auto [path, score] = hmm.viterbi_algorithm(obs);
+                                if(path.size() > 0){
+                                    std::cout<<"Current regime: "<<path(path.size()-1)<<std::endl;
+                                }
+                            }
+                            ukf2.reset(1, 0.001, Eigen::MatrixXd::Identity(1, 1)*.01, 2.0, 0.0, 0.0);
                             has_stock_A = false;
                         }
                     }
                 }
-            } catch (const json::parse_error& e){
+            } catch (const json::exception& e){
                 std::cout<<"Error parsing JSON: "<<e.what()<<std::endl;
                 has_stock_A = false;
                 has_stock_B = false;
@@ -360,7 +366,7 @@ void Research::runLive(){
                         }
                     }
                 }
-            } catch (const json::parse_error& e){
+            } catch (const json::exception& e){
                 std::cout<<"Error parsing JSON: "<<e.what()<<std::endl;
                 has_stock_A = false;
                 has_stock_B = false;

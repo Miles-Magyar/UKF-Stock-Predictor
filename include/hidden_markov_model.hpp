@@ -6,7 +6,6 @@
 #include <string>
 #include <cmath>
 #include <vector>
-#include <numbers>
 struct RegimeParameters {
     double mean_return;
     double mean_volatility;

@@ -4,6 +4,7 @@ project(UKFStockPredictor)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(USE_TLS ON CACHE BOOL "Enable TLS in IXWebSocket" FORCE)
 add_subdirectory(external/IXWebSocket)
 
 set(GLFW_ROOT "${CMAKE_SOURCE_DIR}/external/glfw-3.4.bin.WIN64")
@@ -12,25 +13,14 @@ add_executable(UKFStockPredictor
     src/main.cpp
     src/Research.cpp
     src/unscented_kalman_filter.cpp
-    src/UI.cpp
     src/monte_carlo.cpp
-    external/glad/src/gl.c
     src/hidden_markov_model.cpp
-    external/imgui/imgui.cpp
-    external/imgui/imgui_draw.cpp
-    external/imgui/imgui_tables.cpp
-    external/imgui/imgui_widgets.cpp
-    external/imgui/backends/imgui_impl_glfw.cpp
-    external/imgui/backends/imgui_impl_opengl3.cpp
-    external/imgui/imgui_demo.cpp
-    external/implot/implot.cpp
-    external/implot/implot_items.cpp
 )
 
 target_include_directories(UKFStockPredictor PRIVATE
     include
     libs
-
+    external
     external/glad/include
 
     external/imgui
@@ -49,6 +39,7 @@ target_link_libraries(UKFStockPredictor PRIVATE
     glfw3
     opengl32
     ixwebsocket::ixwebsocket
+    bcrypt
 )
 
 add_custom_command(TARGET UKFStockPredictor POST_BUILD
